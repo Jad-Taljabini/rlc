@@ -1,5 +1,5 @@
 cls HavannahGame:
-  # Board lineare di 169 celle.
+  # Board di 169 celle.
   # Convenzione:
   # 0 = vuota
   # 1 = bianco
@@ -52,6 +52,38 @@ cls HavannahGame:
     self.win_kind = 0
     self.moves_played = 0
 
+  # Verifica se un indice e' dentro la board.
+  fun is_valid_index(Int index) -> Bool:
+    return index >= 0 and index < self.cell_count()
+
+  # Contenuto cella:
+  # 0 vuota, 1 bianco, 2 nero, -1 indice non valido
+  fun get_cell(Int index) -> Int:
+    if !self.is_valid_index(index):
+      return -1
+    return self.cells[index]
+
+  # Giocatore di turno: 1 bianco, 2 nero
+  fun current_player() -> Int:
+    if self.white_turn:
+      return 1
+    return 2
+
+  # True se partita finita
+  fun is_done_game() -> Bool:
+    return self.done
+
+  # Vincitore: 0 nessuno, 1 bianco, 2 nero
+  fun winner_player() -> Int:
+    return self.winner
+
+  # Tipo vittoria: 0 nessuna, 1 bridge, 2 fork, 3 ring
+  fun win_structure() -> Int:
+    return self.win_kind
+
+  # Numero mosse giocate
+  fun move_count() -> Int:
+    return self.moves_played
 
 # Crea una partita nuova e la resetta.
 fun new_game() -> HavannahGame:
