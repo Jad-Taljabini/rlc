@@ -6,6 +6,10 @@ cls HavannahGame:
   # 2 = nero
   Int[169] cells
 
+  # Coordinate assiali per ogni cella (geometria esagonale).
+  Int[169] q_coords
+  Int[169] r_coords
+
   # true  -> turno del bianco
   # false -> turno del nero
   Bool white_turn
@@ -33,6 +37,10 @@ cls HavannahGame:
   fun base_size() -> Int:
     return 8
 
+  # Raggio della board (per base_size=8 -> raggio 7).
+  fun radius() -> Int:
+    return self.base_size() - 1
+    
   # Numero celle totale per questa configurazione.
   fun cell_count() -> Int:
     return 169
@@ -51,6 +59,72 @@ cls HavannahGame:
     self.winner = 0
     self.win_kind = 0
     self.moves_played = 0
+
+  # Costruisce la mappa indice lineare -> coordinate assiali (q,r).
+  fun _initialize_geometry():
+    # index = quante celle valide abbiamo scritto finora.
+    let index = 0
+
+    # q scorre tutte le "colonne assiali" da sinistra a destra.
+    # Range completo: [-R, R].
+    let q = -self.radius()
+    while q <= self.radius():
+      # Primo vincolo su r: |r| <= R  => r >= -R.
+      let min_r = -self.radius()
+
+      # Secondo vincolo su r viene da |s| <= R con s = -q-r.
+      # Da -R <= -q-r <= R si ottiene:
+      #   r >= -q-R   e   r <= -q+R
+      # Qui si prende il bound inferiore candidato: -q-R.
+      let candidate_min = -q - self.radius()
+      
+      # Bound inferiore finale:
+      # r >= max(-R, -q-R)
+      if candidate_min > min_r:
+        min_r = candidate_min
+
+      # Primo vincolo superiore su r: |r| <= R  => r <= R.
+      let max_r = self.radius()
+
+      # Bound superiore candidato da |s| <= R: r <= -q+R.
+      let candidate_max = -q + self.radius()
+
+      # Bound superiore finale:
+      # r <= min(R, -q+R)
+      if candidate_max < max_r:
+        max_r = candidate_max
+
+      # Ora r percorre solo le celle valide della colonna q.
+      let r = min_r
+      while r <= max_r:
+        # Salva la posizione assiale della cella lineare "index".
+        self.q_coords[index] = q
+        self.r_coords[index] = r
+
+        # Prossimo slot lineare.
+        index = index + 1
+
+        # Prossima r nella stessa colonna q.
+        r = r + 1
+
+      # Passa alla colonna q successiva.
+      q = q + 1
+
+    # Check di correttezza geometrica.
+    # Deve aver scritto esattamente 169 celle (con R=7).
+    assert(index == self.cell_count(), "Invalid Havannah geometry")
+
+  # Ritorna coordinata q della cella (0 se indice non valido).
+  fun cell_q(Int index) -> Int:
+    if !self.is_valid_index(index):
+      return 0
+    return self.q_coords[index]
+
+  # Ritorna coordinata r della cella (0 se indice non valido).
+  fun cell_r(Int index) -> Int:
+    if !self.is_valid_index(index):
+      return 0
+    return self.r_coords[index]
 
   # Verifica se un indice e' dentro la board.
   fun is_valid_index(Int index) -> Bool:
