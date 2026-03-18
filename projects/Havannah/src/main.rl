@@ -158,6 +158,34 @@ cls HavannahGame:
   # Numero mosse giocate
   fun move_count() -> Int:
     return self.moves_played
+
+  # Cerca l'indice lineare associato a coordinate assiali (q,r).
+  # Ritorna -1 se la coppia non esiste sulla board.
+  fun _find_index(Int q, Int r) -> Int:
+    let i = 0
+    while i < self.cell_count():
+      if self.q_coords[i] == q and self.r_coords[i] == r:
+        return i
+      i = i + 1
+    return -1
+
+  # Ritorna l'indice del vicino in una delle 6 direzioni.
+  # Se il vicino e' fuori board, ritorna -1.
+  fun _neighbor_index(Int index, Int direction) -> Int:
+    let q = self.q_coords[index]
+    let r = self.r_coords[index]
+
+    if direction == 0:
+      return self._find_index(q + 1, r)
+    if direction == 1:
+      return self._find_index(q + 1, r - 1)
+    if direction == 2:
+      return self._find_index(q, r - 1)
+    if direction == 3:
+      return self._find_index(q - 1, r)
+    if direction == 4:
+      return self._find_index(q - 1, r + 1)
+    return self._find_index(q, r + 1)
   
   # True se non ci sono piu' celle vuote.
   fun _is_board_full() -> Bool:
