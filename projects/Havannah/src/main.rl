@@ -59,6 +59,7 @@ cls HavannahGame:
     self.winner = 0
     self.win_kind = 0
     self.moves_played = 0
+    self._initialize_geometry()
 
   # Costruisce la mappa indice lineare -> coordinate assiali (q,r).
   fun _initialize_geometry():
@@ -186,6 +187,43 @@ cls HavannahGame:
     if direction == 4:
       return self._find_index(q - 1, r + 1)
     return self._find_index(q, r + 1)
+
+  # Restituisce l'id del corner toccato da (q,r), oppure -1.
+  fun _corner_id(Int q, Int r) -> Int:
+    let radius = self.radius()
+    if q == radius and r == 0:
+      return 0
+    if q == 0 and r == radius:
+      return 1
+    if q == -radius and r == radius:
+      return 2
+    if q == -radius and r == 0:
+      return 3
+    if q == 0 and r == -radius:
+      return 4
+    if q == radius and r == -radius:
+      return 5
+    return -1
+
+  # Restituisce l'id del lato toccato da (q,r), escludendo i corner, oppure -1.
+  fun _edge_id(Int q, Int r) -> Int:
+    if self._corner_id(q, r) != -1:
+      return -1
+
+    let radius = self.radius()
+    if q == radius:
+      return 0
+    if q + r == radius:
+      return 1
+    if r == -radius:
+      return 2
+    if q == -radius:
+      return 3
+    if q + r == -radius:
+      return 4
+    if r == radius:
+      return 5
+    return -1
   
   # True se non ci sono piu' celle vuote.
   fun _is_board_full() -> Bool:
