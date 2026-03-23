@@ -224,6 +224,79 @@ cls HavannahGame:
     if r == radius:
       return 5
     return -1
+
+  # Controlla la componente connessa del player che contiene root_index (root_index è l’indice della cella da cui si parte per esplorare la componente connessa).
+  # Ritorna:
+  # 0 = nessuna struttura
+  # 1 = bridge (>=2 corner)
+  # 2 = fork   (>=3 edge)
+  fun _bridge_or_fork_from(Int root_index, Int player) -> Int:
+    if !self.is_valid_index(root_index) or self.cells[root_index] != player:
+      return 0
+
+    let visited : Bool[169]
+    let i = 0
+    while i < self.cell_count():
+      visited[i] = false
+      i = i + 1
+
+    let queue : Int[169]
+    let head = 0
+    let tail = 0
+
+    # Segna quali corner/edge sono toccati dalla componente.
+    let touched_corners : Bool[6]
+    let touched_edges : Bool[6]
+    let marker = 0
+    while marker < 6:
+      touched_corners[marker] = false
+      touched_edges[marker] = false
+      marker = marker + 1
+
+    visited[root_index] = true
+    queue[tail] = root_index
+    tail = tail + 1
+
+    while head < tail:
+      let current = queue[head]
+      head = head + 1
+
+      let q = self.q_coords[current]
+      let r = self.r_coords[current]
+
+      let corner = self._corner_id(q, r)
+      if corner != -1:
+        touched_corners[corner] = true
+
+      let edge = self._edge_id(q, r)
+      if edge != -1:
+        touched_edges[edge] = true
+
+      let direction = 0
+      while direction < 6:
+        let neighbor = self._neighbor_index(current, direction)
+        if neighbor != -1 and !visited[neighbor] and self.cells[neighbor] == player:
+          visited[neighbor] = true
+          queue[tail] = neighbor
+          tail = tail + 1
+        direction = direction + 1
+
+    # Conta quanti corner/edge distinti sono stati toccati.
+    let corner_count = 0
+    let edge_count = 0
+    marker = 0
+    while marker < 6:
+      if touched_corners[marker]:
+        corner_count = corner_count + 1
+      if touched_edges[marker]:
+        edge_count = edge_count + 1
+      marker = marker + 1
+
+    if corner_count >= 2:
+      return 1
+    if edge_count >= 3:
+      return 2
+    return 0
   
   # True se non ci sono piu' celle vuote.
   fun _is_board_full() -> Bool:
@@ -236,7 +309,7 @@ cls HavannahGame:
 
   # Placeholder: per ora nessuna vittoria (bridge/fork/ring)
   fun _detect_win_from_move(Int move_index, Int player) -> Int:
-    return 0
+    return self._bridge_or_fork_from(move_index, player)
 
   # Codifica vittoria in status:
   # bianco 1..3, nero 4..6
