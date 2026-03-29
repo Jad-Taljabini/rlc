@@ -61,7 +61,7 @@ cls HavannahGame:
   fun radius() -> Int:
     return self.base_size() - 1
     
-  # Numero celle totale per questa configurazione.
+  # Numero celle totale per questa configurazione. celle = 3R(R + 1) + 1 = (3 x 7 x 8) + 1 = 169
   fun cell_count() -> Int:
     return 169
 
