@@ -1,4 +1,10 @@
 cls HavannahGame:
+
+  # ============================================================
+  # SEZIONE: STATO DEL GIOCO
+  # - campi permanenti della partita
+  # ============================================================
+  
   # Board di 169 celle.
   # Convenzione:
   # 0 = vuota
@@ -9,6 +15,9 @@ cls HavannahGame:
   # Coordinate assiali per ogni cella (geometria esagonale).
   Int[169] q_coords
   Int[169] r_coords
+
+  # Marcatori temporanei usati durante la DFS del ring.
+  Bool[169] ring_marks
 
   # true  -> turno del bianco
   # false -> turno del nero
@@ -32,6 +41,17 @@ cls HavannahGame:
 
   # Numero di mosse giocate finora
   Int moves_played
+
+  # ============================================================
+  # FINE SEZIONE: STATO DEL GIOCO
+  # ============================================================
+
+  # ============================================================
+  # SEZIONE: COSTANTI E INIZIALIZZAZIONE
+  # - dimensioni board
+  # - reset stato
+  # - costruzione geometria assiale
+  # ============================================================
 
   # Dimensione base.
   fun base_size() -> Int:
@@ -115,17 +135,15 @@ cls HavannahGame:
     # Deve aver scritto esattamente 169 celle (con R=7).
     assert(index == self.cell_count(), "Invalid Havannah geometry")
 
-  # Ritorna coordinata q della cella (0 se indice non valido).
-  fun cell_q(Int index) -> Int:
-    if !self.is_valid_index(index):
-      return 0
-    return self.q_coords[index]
+  # ============================================================
+  # FINE SEZIONE: COSTANTI E INIZIALIZZAZIONE
+  # ============================================================
 
-  # Ritorna coordinata r della cella (0 se indice non valido).
-  fun cell_r(Int index) -> Int:
-    if !self.is_valid_index(index):
-      return 0
-    return self.r_coords[index]
+
+  # ============================================================
+  # SEZIONE: API PUBBLICA (LETTURA STATO)
+  # - metodi di lettura sicuri usati da esterno
+  # ============================================================
 
   # Verifica se un indice e' dentro la board.
   fun is_valid_index(Int index) -> Bool:
@@ -137,6 +155,18 @@ cls HavannahGame:
     if !self.is_valid_index(index):
       return -1
     return self.cells[index]
+
+  # Ritorna coordinata q della cella (0 se indice non valido).
+  fun cell_q(Int index) -> Int:
+    if !self.is_valid_index(index):
+      return 0
+    return self.q_coords[index]
+
+  # Ritorna coordinata r della cella (0 se indice non valido).
+  fun cell_r(Int index) -> Int:
+    if !self.is_valid_index(index):
+      return 0
+    return self.r_coords[index]
 
   # Giocatore di turno: 1 bianco, 2 nero
   fun current_player() -> Int:
@@ -159,6 +189,15 @@ cls HavannahGame:
   # Numero mosse giocate
   fun move_count() -> Int:
     return self.moves_played
+
+  # ============================================================
+  # FINE SEZIONE: API PUBBLICA (LETTURA STATO)
+  # ============================================================
+
+
+  # ============================================================
+  # SEZIONE: NAVIGAZIONE BOARD (UTILITY GENERALI)
+  # ============================================================
 
   # Cerca l'indice lineare associato a coordinate assiali (q,r).
   # Ritorna -1 se la coppia non esiste sulla board.
@@ -187,6 +226,15 @@ cls HavannahGame:
     if direction == 4:
       return self._find_index(q - 1, r + 1)
     return self._find_index(q, r + 1)
+
+  # ============================================================
+  # FINE SEZIONE: NAVIGAZIONE BOARD
+  # ============================================================
+
+
+  # ============================================================
+  # SEZIONE: BRIDGE OR FORK
+  # ============================================================
 
   # Restituisce l'id del corner toccato da (q,r), oppure -1.
   fun _corner_id(Int q, Int r) -> Int:
@@ -297,6 +345,123 @@ cls HavannahGame:
     if edge_count >= 3:
       return 2
     return 0
+
+  # ============================================================
+  # FINE SEZIONE: BRIDGE OR FORK
+  # ============================================================
+
+  # ============================================================
+  # SEZIONE: RING (rilevazione ciclo)
+  # ============================================================
+
+  # Normalizza una direzione nel range [0, 5].
+  fun _normalize_direction(Int direction) -> Int:
+    let normalized = direction
+    while normalized < 0:
+      normalized = normalized + 6
+    while normalized >= 6:
+      normalized = normalized - 6
+    return normalized
+
+  # Verifica se start e target sono connessi passando solo su celle del player,
+  # senza usare la cella forbidden_index.
+  fun _is_connected_avoiding(Int start, Int target, Int forbidden_index, Int player) -> Bool:
+    if start == target:
+      return true
+    if start == forbidden_index or target == forbidden_index:
+      return false
+
+    let visited : Bool[169]
+    let i = 0
+    while i < self.cell_count():
+      visited[i] = false
+      i = i + 1
+
+    let queue : Int[169]
+    let head = 0
+    let tail = 0
+    visited[start] = true
+    queue[tail] = start
+    tail = tail + 1
+
+    while head < tail:
+      let current = queue[head]
+      head = head + 1
+
+      let direction = 0
+      while direction < 6:
+        let neighbor = self._neighbor_index(current, direction)
+        if neighbor != -1 and neighbor != forbidden_index and !visited[neighbor] and self.cells[neighbor] == player:
+          if neighbor == target:
+            return true
+          visited[neighbor] = true
+          queue[tail] = neighbor
+          tail = tail + 1
+        direction = direction + 1
+
+    return false
+
+  # True se la mossa collega due vicini che erano gia' connessi senza la mossa stessa.
+  fun _already_joined(Int move_index, Int player) -> Bool:
+    let neighbors : Int[6]
+    let count = 0
+    let direction = 0
+    while direction < 6:
+      let neighbor = self._neighbor_index(move_index, direction)
+      if neighbor != -1 and self.cells[neighbor] == player:
+        neighbors[count] = neighbor
+        count = count + 1
+      direction = direction + 1
+
+    if count < 2:
+      return false
+
+    let i = 0
+    while i < count:
+      let j = i + 1
+      while j < count:
+        if self._is_connected_avoiding(neighbors[i], neighbors[j], move_index, player):
+          return true
+        j = j + 1
+      i = i + 1
+
+    return false
+
+  # DFS direzionale per rilevare un ring.
+  fun _check_ring_dfs(Int index, Int left, Int right, Int player) -> Bool:
+    if index == -1:
+      return false
+    if self.cells[index] != player:
+      return false
+    if self.ring_marks[index]:
+      return true
+
+    self.ring_marks[index] = true
+    let success = false
+    let direction = left
+    while direction <= right:
+      if !success:
+        let dir = self._normalize_direction(direction)
+        let neighbor = self._neighbor_index(index, dir)
+        if self._check_ring_dfs(neighbor, dir - 1, dir + 1, player):
+          success = true
+      direction = direction + 1
+
+    self.ring_marks[index] = false
+    return success
+
+  # True se dalla mossa emerge un ring del player.
+  fun _has_ring_from(Int move_index, Int player) -> Bool:
+    let i = 0
+    while i < self.cell_count():
+      self.ring_marks[i] = false
+      i = i + 1
+
+    return self._check_ring_dfs(move_index, 0, 3, player)
+
+  # ============================================================
+  # FINE SEZIONE: RING
+  # ============================================================
   
   # True se non ci sono piu' celle vuote.
   fun _is_board_full() -> Bool:
@@ -307,9 +472,16 @@ cls HavannahGame:
       i = i + 1
     return true
 
-  # Placeholder: per ora nessuna vittoria (bridge/fork/ring)
+  # Verifica bridge/fork e poi ring.
   fun _detect_win_from_move(Int move_index, Int player) -> Int:
-    return self._bridge_or_fork_from(move_index, player)
+    let structure = self._bridge_or_fork_from(move_index, player)
+    if structure != 0:
+      return structure
+
+    if self._already_joined(move_index, player) and self._has_ring_from(move_index, player):
+      return 3
+
+    return 0
 
   # Codifica vittoria in status:
   # bianco 1..3, nero 4..6
