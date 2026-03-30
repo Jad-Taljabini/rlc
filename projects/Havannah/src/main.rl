@@ -16,6 +16,9 @@ cls HavannahGame:
   Int[169] q_coords
   Int[169] r_coords
 
+  # Matrice dei vicini precomputati (169 x 6).
+  Int[169][6] neighbors
+
   # Marcatori temporanei usati durante la DFS del ring.
   Bool[169] ring_marks
 
@@ -135,6 +138,19 @@ cls HavannahGame:
     # Deve aver scritto esattamente 169 celle (con R=7).
     assert(index == self.cell_count(), "Invalid Havannah geometry")
 
+    # Precompute dei vicini in stile OpenSpiel: lookup O(1) a runtime.
+    let i = 0
+    while i < self.cell_count():
+      let q = self.q_coords[i]
+      let r = self.r_coords[i]
+      self.neighbors[0][i] = self._find_index(q + 1, r)
+      self.neighbors[1][i] = self._find_index(q + 1, r - 1)
+      self.neighbors[2][i] = self._find_index(q, r - 1)
+      self.neighbors[3][i] = self._find_index(q - 1, r)
+      self.neighbors[4][i] = self._find_index(q - 1, r + 1)
+      self.neighbors[5][i] = self._find_index(q, r + 1)
+      i = i + 1
+
   # ============================================================
   # FINE SEZIONE: COSTANTI E INIZIALIZZAZIONE
   # ============================================================
@@ -212,20 +228,11 @@ cls HavannahGame:
   # Ritorna l'indice del vicino in una delle 6 direzioni.
   # Se il vicino e' fuori board, ritorna -1.
   fun _neighbor_index(Int index, Int direction) -> Int:
-    let q = self.q_coords[index]
-    let r = self.r_coords[index]
-
-    if direction == 0:
-      return self._find_index(q + 1, r)
-    if direction == 1:
-      return self._find_index(q + 1, r - 1)
-    if direction == 2:
-      return self._find_index(q, r - 1)
-    if direction == 3:
-      return self._find_index(q - 1, r)
-    if direction == 4:
-      return self._find_index(q - 1, r + 1)
-    return self._find_index(q, r + 1)
+    if !self.is_valid_index(index):
+      return -1
+    if direction < 0 or direction >= 6:
+      return -1
+    return self.neighbors[direction][index]
 
   # ============================================================
   # FINE SEZIONE: NAVIGAZIONE BOARD
