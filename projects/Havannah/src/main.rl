@@ -9,6 +9,7 @@ cls HavannahGame:
   # 0 = vuota
   # 1 = bianco
   # 2 = nero
+  # La capacita' massima corrisponde a board_size = 8.
   Int[169] cells
 
   # Coordinate assiali per ogni cella (geometria esagonale).
@@ -44,6 +45,9 @@ cls HavannahGame:
   # Numero di mosse giocate finora
   Int moves_played
 
+  # Dimensione base runtime della board.
+  Int base_size_value
+
   # ============================================================
   # FINE SEZIONE: STATO DEL GIOCO
   # ============================================================
@@ -57,7 +61,7 @@ cls HavannahGame:
 
   # Dimensione base.
   fun base_size() -> Int:
-    return 8
+    return self.base_size_value
 
   # Raggio della board (per base_size=8 -> raggio 7).
   fun radius() -> Int:
@@ -65,11 +69,26 @@ cls HavannahGame:
     
   # Numero celle totale per questa configurazione. celle = 3R(R + 1) + 1 = (3 x 7 x 8) + 1 = 169
   fun cell_count() -> Int:
-    return 169
+    let r = self.radius()
+    return (3 * r * (r + 1)) + 1
 
-  # Inizializza completamente una nuova partita.
-  fun init():
+  # Inizializza una nuova partita con dimensione base configurabile.
+  fun init(Int board_size):
+    assert(board_size >= 3 and board_size <= 8, "Unsupported Havannah board size")
+    self.base_size_value = board_size
+    # Inizializza esplicitamente i buffer della board.
+    let i = 0
+    while i < 169:
+      self.cells[i] = 0
+      self.ring_marks[i] = false
+      i = i + 1
+
+    # Stato logico iniziale.
     self.white_turn = true
+    self.done = false
+    self.winner = 0
+    self.win_kind = 0
+    self.moves_played = 0
     self._initialize_geometry()
 
   # Costruisce la mappa indice lineare -> coordinate assiali (q,r).
@@ -523,14 +542,15 @@ cls HavannahGame:
     self.white_turn = !self.white_turn
     return 0
 
-# Crea una partita nuova e la resetta.
-fun new_game() -> HavannahGame:
+# Crea una partita nuova con dimensione base configurabile.
+fun new_game(Int board_size) -> HavannahGame:
   let game : HavannahGame
+  game.init(board_size)
   return game
 
 # Entrypoint minimo di controllo.
 fun main() -> Int:
-  let game = new_game()
+  let game = new_game(8)
   if game.cell_count() == 169 and game.base_size() == 8:
     return 0
   return 1
