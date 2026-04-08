@@ -51,7 +51,7 @@ cls HavannahGame:
   # ============================================================
   # SEZIONE: COSTANTI E INIZIALIZZAZIONE
   # - dimensioni board
-  # - reset stato
+  # - init stato
   # - costruzione geometria assiale
   # ============================================================
 
@@ -67,20 +67,9 @@ cls HavannahGame:
   fun cell_count() -> Int:
     return 169
 
-  # Reset completo dello stato partita.
-  fun reset():
-    # Svuota tutta la board.
-    let i = 0
-    while i < self.cell_count():
-      self.cells[i] = 0
-      i = i + 1
-
-    # Reinizializza stato logico.
+  # Inizializza completamente una nuova partita.
+  fun init():
     self.white_turn = true
-    self.done = false
-    self.winner = 0
-    self.win_kind = 0
-    self.moves_played = 0
     self._initialize_geometry()
 
   # Costruisce la mappa indice lineare -> coordinate assiali (q,r).
@@ -537,7 +526,6 @@ cls HavannahGame:
 # Crea una partita nuova e la resetta.
 fun new_game() -> HavannahGame:
   let game : HavannahGame
-  game.reset()
   return game
 
 # Entrypoint minimo di controllo.
