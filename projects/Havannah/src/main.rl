@@ -1,5 +1,4 @@
 cls HavannahGame:
-
   # ============================================================
   # SEZIONE: STATO DEL GIOCO
   # - campi permanenti della partita
