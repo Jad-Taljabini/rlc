@@ -1,3 +1,6 @@
+import collections.vector
+import action
+
 cls HavannahGame:
   # ============================================================
   # SEZIONE: STATO DEL GIOCO
@@ -547,6 +550,47 @@ fun new_game(Int board_size) -> HavannahGame:
   let game : HavannahGame
   game.init(board_size)
   return game
+
+# ============================================================
+# SEZIONE: INTERFACCIA RULEBOOK ACT
+# - espone play_move come action function per fuzzer/tooling
+# ============================================================
+
+@classes
+act play(Int board_size) -> Game:
+  frm board = new_game(board_size)
+
+  while !board.is_done_game():
+    act play_move(BInt<0, 169> index) {
+      index.value < board.cell_count() and board.get_cell(index.value) == 0
+    }
+
+    board.play_move(index.value)
+
+fun get_currfuzzent_player(Game g) -> Int:
+  if g.is_done():
+    return -4
+  return g.board.current_player() - 1
+
+fun score(Game g, Int player_id) -> Float:
+  if !g.is_done():
+    return 0.0
+  if g.board.winner_player() == 0:
+    return 0.0
+  if g.board.winner_player() == player_id + 1:
+    return 1.0
+  return -1.0
+
+fun get_num_players() -> Int:
+  return 2
+
+fun fuzz(Vector<Byte> input):
+  if input.size() == 0:
+    return
+
+  let state = play(8)
+  let action_value : AnyGameAction
+  parse_and_execute(state, action_value, input)
 
 # Entrypoint minimo di controllo.
 fun main() -> Int:
