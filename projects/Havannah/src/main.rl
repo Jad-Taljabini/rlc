@@ -553,7 +553,7 @@ fun new_game(Int board_size) -> HavannahGame:
 
 # ============================================================
 # SEZIONE: INTERFACCIA RULEBOOK ACT
-# - espone play_move come action function per fuzzer/tooling
+# - espone una sessione con scelta size + mosse per fuzzer/tooling
 # ============================================================
 
 @classes
@@ -567,17 +567,22 @@ act play(Int board_size) -> Game:
 
     board.play_move(index.value)
 
-fun get_currfuzzent_player(Game g) -> Int:
-  if g.is_done():
-    return -4
-  return g.board.current_player() - 1
+@classes
+act session() -> Session:
+  act choose_board_size(BInt<3, 8> size)
+  subaction* game = play(size.value)
 
-fun score(Game g, Int player_id) -> Float:
-  if !g.is_done():
+fun get_current_player(Session s) -> Int:
+  if s.is_done():
+    return -4
+  return s.game.board.current_player() - 1
+
+fun score(Session s, Int player_id) -> Float:
+  if !s.is_done():
     return 0.0
-  if g.board.winner_player() == 0:
+  if s.game.board.winner_player() == 0:
     return 0.0
-  if g.board.winner_player() == player_id + 1:
+  if s.game.board.winner_player() == player_id + 1:
     return 1.0
   return -1.0
 
@@ -588,8 +593,8 @@ fun fuzz(Vector<Byte> input):
   if input.size() == 0:
     return
 
-  let state = play(8)
-  let action_value : AnyGameAction
+  let state = session()
+  let action_value : AnySessionAction
   parse_and_execute(state, action_value, input)
 
 # Entrypoint minimo di controllo.
