@@ -1,15 +1,28 @@
 #!/usr/bin/env bash
-set -u -o pipefail # errore se usi una variabile non definita o una pipe fallisce
-set -e # lo script si ferma appena un comando restituisce errore
+set -euo pipefail
 
-RLC="$HOME/Documents/rlc-infrastructure/rlc-release/install/bin/rlc" # Definisce una variabile RLC con il percorso dell'eseguibile rlc
-mkdir -p build # Crea la directory build se non esiste
-"$RLC" src/main.rl -o build/app # Compila il programma main.rl in build/app
+RLC="$HOME/Documents/rlc-infrastructure/rlc-release/install/bin/rlc"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
-set +e # Disabilita il flag di errore per il comando successivo, perché adesso vuole eseguire il programma anche se termina con errore, senza far morire subito lo script
-./build/app 
-code=$? # Salva il codice di uscita del programma
-set -e # Riabilita il flag di errore per il comando successivo, perché adesso vuole eseguire il programma anche se termina con errore, senza far morire subito lo script
+mkdir -p build
 
-echo "Exit code: $code" # Stampa il codice di uscita del programma
-exit $code # Termina lo script con il codice di uscita del programma
+case "${1:-gui}" in
+  main)
+    "$RLC" src/main.rl -o build/app
+    exec ./build/app
+    ;;
+  gui)
+    "$RLC" src/main.rl --shared -o build/lib.dylib
+    "$RLC" --python src/main.rl -o build/wrapper.py
+    exec "$PYTHON_BIN" src/gui.py
+    ;;
+  build)
+    "$RLC" src/main.rl -o build/app
+    "$RLC" src/main.rl --shared -o build/lib.dylib
+    "$RLC" --python src/main.rl -o build/wrapper.py
+    ;;
+  *)
+    echo "Uso: $0 [gui|main|build]"
+    exit 1
+    ;;
+esac
