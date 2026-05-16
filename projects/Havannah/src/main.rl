@@ -1,5 +1,6 @@
 import collections.vector
 import action
+import serialization.to_byte_vector
 
 cls HavannahGame:
   # ============================================================
@@ -595,7 +596,28 @@ fun fuzz(Vector<Byte> input):
 
   let state = session()
   let action_value : AnySessionAction
-  parse_and_execute(state, action_value, input)
+  let all_actions = enumerate(action_value)
+  let read_bytes = 0
+
+  while read_bytes + 8 < input.size() and !state.is_done():
+    let sampled_action : Int
+    from_byte_vector(sampled_action, input, read_bytes)
+    if sampled_action < 0:
+      sampled_action = sampled_action * -1
+    if sampled_action < 0:
+      sampled_action = 0
+
+    let valid_actions : Vector<AnySessionAction>
+    let i = 0
+    while i < all_actions.size():
+      if can apply(all_actions.get(i), state):
+        valid_actions.append(all_actions.get(i))
+      i = i + 1
+
+    if valid_actions.size() == 0:
+      return
+
+    apply(valid_actions.get(sampled_action % valid_actions.size()), state)
 
 # Entrypoint minimo di controllo.
 fun main() -> Int:
