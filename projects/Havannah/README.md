@@ -2,9 +2,14 @@
 
 Progetto PII: fuzzing guidato da coverage su una GUI Tkinter del gioco **Havannah**, scritto in [Rulebook](https://rl-language.github.io) (RLC).
 
-Il codice principale nel repo è in `rlc/projects/Havannah/` (fork [Jad-Taljabini/rlc](https://github.com/Jad-Taljabini/rlc)). Una copia di lavoro locale può stare in `rlc-projects/Havannah`; per il push usare la copia sotto `rlc-infrastructure/rlc`.
+Repository: [Jad-Taljabini/rlc](https://github.com/Jad-Taljabini/rlc) — branch **`UI_Fuzzer`**, cartella `projects/Havannah/`.
 
-Il codice è sul branch **`UI_Fuzzer`**; dopo il clone esegui `git checkout UI_Fuzzer`.
+```bash
+git clone https://github.com/Jad-Taljabini/rlc.git
+cd rlc
+git checkout UI_Fuzzer
+cd projects/Havannah
+```
 
 ## Prerequisiti
 
@@ -20,9 +25,9 @@ export RLC=/percorso/a/rlc
 
 ## Avvio rapido
 
-```bash
-cd rlc/projects/Havannah   # dalla root del repo rlc
+Dalla cartella `projects/Havannah/` (dopo clone e checkout):
 
+```bash
 ./run.sh build             # genera build/lib.dylib e build/wrapper.py
 ./run.sh gui               # GUI pulita (src/gui.py)
 ./run.sh fuzz --help       # fuzzer UI
