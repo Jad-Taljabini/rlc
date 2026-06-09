@@ -12,13 +12,11 @@ def load_wrapper():
 
 
 STRUCTURE_NAMES = {1: "bridge", 2: "fork", 3: "ring"}
-# Colori fill/outline per ciascun giocatore.
 STONE_COLORS = {1: ("#f7f7f7", "#cfcfcf"), 2: ("#111111", "#333333")}
 
 
 class HavannahGUI:
-    # Inizializza la finestra e lo stato dell'applicazione.
-    def __init__(self):
+    def __init__(self, initial_board_size=8, test_mode=False, show_window=True):        
         self.wrapper = load_wrapper()
         self.hex_size = 26.0
         self.margin = 48.0
@@ -26,6 +24,7 @@ class HavannahGUI:
         self.board_size = None
         self.session = None
         self.game = None
+        self.test_mode = test_mode
 
         self.root = tk.Tk()
         self.root.title("Havannah")
@@ -34,9 +33,14 @@ class HavannahGUI:
         self.board_label_var = tk.StringVar(value="")
 
         self._build_layout()
-        self._reset_game(initial=True)
 
-    # Costruisce i widget principali della GUI.
+        if self.test_mode:
+            if not show_window:
+                self.root.withdraw()
+            self._start_session(initial_board_size)
+        else:
+            self._reset_game(initial=True)
+
     def _build_layout(self):
         self.main_frame = tk.Frame(self.root, padx=10, pady=10)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -61,7 +65,6 @@ class HavannahGUI:
         return v
 
     def _ask_board_size(self, initial=False):
-        # Nasconde la board e mostra la selezione dentro la stessa finestra.
         for widget in (self.top_bar, self.canvas, self.info):
             widget.pack_forget()
 
@@ -69,7 +72,7 @@ class HavannahGUI:
         panel.pack(fill=tk.BOTH, expand=True)
 
         selected_size = tk.IntVar(value=self.board_size if self.board_size is not None else 8)
-        done_var = tk.IntVar(value=0)  # 0 attesa, 1 conferma, -1 annulla
+        done_var = tk.IntVar(value=0)
 
         title = "Scegli la dimensione della board" if initial else "Nuova partita"
         tk.Label(panel, text=title, font=("TkDefaultFont", 14, "bold")).pack(anchor="w")
@@ -90,7 +93,6 @@ class HavannahGUI:
         self.root.wait_variable(done_var)
         panel.destroy()
 
-        # Ripristina la board
         self.top_bar.pack(fill=tk.X, pady=(0, 8))
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.info.pack(fill=tk.X, pady=(8, 0))
@@ -114,7 +116,6 @@ class HavannahGUI:
         self._redraw_stones()
         self._refresh_status()
 
-    # Calcola le coordinate pixel di ogni cella a partire dalle coordinate assiali.
     def _compute_positions(self):
         if self.game is None:
             return
@@ -131,7 +132,6 @@ class HavannahGUI:
         height = (max_y - min_y) + (self.margin * 2.0)
         self.canvas.config(width=int(width), height=int(height))
 
-    # Restituisce i vertici del poligono esagonale centrato in (cx, cy).
     def _hex_points(self, cx, cy):
         points = []
         for k in range(6):
@@ -139,11 +139,9 @@ class HavannahGUI:
             points += [cx + self.hex_size * math.cos(angle), cy + self.hex_size * math.sin(angle)]
         return points
 
-    # Registra sul tag il click che scatena la mossa della cella indicata.
     def _bind_cell_click(self, tag, index):
         self.canvas.tag_bind(tag, "<Button-1>", lambda _e: self._on_cell_click(index))
 
-    # Disegna la board vuota e registra gli handler di click sulle celle.
     def _draw_static_board(self):
         self.canvas.delete("all")
         for index, (cx, cy) in self.positions.items():
@@ -152,7 +150,6 @@ class HavannahGUI:
                                        width=1.5, tags=(tag, "cell"))
             self._bind_cell_click(tag, index)
 
-    # Ridisegna le pedine in base allo stato corrente del motore rlc.
     def _redraw_stones(self):
         self.canvas.delete("stone")
         radius = self.hex_size * 0.62
@@ -171,7 +168,6 @@ class HavannahGUI:
         structure = STRUCTURE_NAMES.get(self.game.win_structure(), "unknown")
         return winner, structure
 
-    # Aggiorna la riga di stato con turno corrente e ultimo evento.
     def _refresh_status(self, event_message=""):
         if self.game is None:
             self.status_var.set("Seleziona la dimensione della board per iniziare.")
@@ -187,7 +183,6 @@ class HavannahGUI:
             turn_text = f"Turno: {current}"
         self.status_var.set(f"{turn_text} | {event_message}" if event_message else turn_text)
 
-    # Gestisce il click su una cella: applica mossa, ridisegna e aggiorna stato.
     def _on_cell_click(self, index):
         if self.session is None or self.game is None:
             return
@@ -210,7 +205,6 @@ class HavannahGUI:
             return
         self._refresh_status()
 
-    # Ripristina la partita allo stato iniziale.
     def _reset_game(self, initial=False):
         board_size = self._ask_board_size(initial=initial)
         if board_size is None:
@@ -219,12 +213,20 @@ class HavannahGUI:
             return
         self._start_session(board_size)
 
-    # Avvia il loop principale dell'interfaccia grafica.
+    def fuzz_reset_to_size(self, board_size):
+        if board_size < 3 or board_size > 8:
+            raise ValueError(f"Board size non valida: {board_size}")
+        self._start_session(board_size)
+        self.root.update_idletasks()    
+
+    def fuzz_click_cell(self, index):
+        self._on_cell_click(index)
+        self.root.update_idletasks()    
+
     def run(self):
         self.root.mainloop()
 
 
-# Avvia la GUI quando il file viene eseguito direttamente.
 def main():
     HavannahGUI().run()
 
