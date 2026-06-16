@@ -1,4 +1,4 @@
-# Havannah — UI fuzzing benchmark
+# Havannah — UI Fuzzing benchmark
 
 Progetto PII: fuzzing guidato da coverage su una GUI Tkinter del gioco **Havannah**, scritto in [Rulebook](https://rl-language.github.io) (RLC).
 
